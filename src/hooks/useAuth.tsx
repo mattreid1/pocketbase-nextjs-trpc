@@ -8,8 +8,16 @@ import { clearAuthCookie } from "@/app/actions";
 
 const pb = new PocketBase(env.NEXT_PUBLIC_POCKETBASE_URL);
 
+function setAuthCookie() {
+  document.cookie = pb.authStore.exportToCookie({
+    httpOnly: false,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "Strict",
+  });
+}
+
 export function useAuth() {
-  const [user, setUser] = useState<UserRecord>(
+  const [user, setUser] = useState<UserRecord | null>(
     pb.authStore.record as UserRecord
   );
   const [loading, setLoading] = useState(true);
@@ -25,15 +33,20 @@ export function useAuth() {
       try {
         if (pb.authStore.isValid) {
           await pb.collection("users").authRefresh();
+        } else {
+          setUser(null);
         }
       } catch (_) {
+        setUser(null);
         pb.authStore.clear();
       } finally {
         setLoading(false);
       }
     };
 
-    refreshAuth().catch(console.error);
+    refreshAuth()
+      .then(() => setAuthCookie())
+      .catch(console.error);
 
     return () => {
       unsubscribe();
@@ -45,12 +58,7 @@ export function useAuth() {
       .collection("users")
       .authWithPassword(email, password);
 
-    // Set the cookie
-    document.cookie = pb.authStore.exportToCookie({
-      httpOnly: false,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-    });
+    setAuthCookie();
 
     return authData;
   };

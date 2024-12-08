@@ -83,12 +83,6 @@ export default function SignupPage() {
       // Log the new user in
       await login(email, password);
 
-      document.cookie = pb.authStore.exportToCookie({
-        httpOnly: false,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "Strict",
-      });
-
       toast.success("Account created successfully! Redirecting...");
 
       // Redirect to home page
