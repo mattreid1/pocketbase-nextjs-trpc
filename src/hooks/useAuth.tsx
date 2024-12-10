@@ -17,26 +17,23 @@ function setAuthCookie() {
 }
 
 export function useAuth() {
-  const [user, setUser] = useState<UserRecord | null>(
-    pb.authStore.record as UserRecord
-  );
+  const [user, setUser] = useState<UserRecord | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Listen to auth state changes
-    const unsubscribe = pb.authStore.onChange((token, model) => {
-      setUser(model as UserRecord);
+    const unsubscribe = pb.authStore.onChange((_token, model) => {
+      setUser(model ? (model as UserRecord) : null);
     });
 
-    // Try to refresh the auth on mount
     const refreshAuth = async () => {
       try {
         if (pb.authStore.isValid) {
           await pb.collection("users").authRefresh();
+          setAuthCookie();
         } else {
           setUser(null);
         }
-      } catch (_) {
+      } catch (error) {
         setUser(null);
         pb.authStore.clear();
       } finally {
@@ -44,9 +41,7 @@ export function useAuth() {
       }
     };
 
-    refreshAuth()
-      .then(() => setAuthCookie())
-      .catch(console.error);
+    void refreshAuth();
 
     return () => {
       unsubscribe();
